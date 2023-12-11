@@ -103,8 +103,11 @@ bool checkSudoku(int **grid) {
     return true; // The Sudoku grid is valid
 }
 
-int printSolution(int **grid) {
+void printSolution(int **grid) {
     if (!solveSudoku(grid)) cout << "No solution exists";
     else if (!checkSudoku(grid)) cout << "Incorrect solution";
-    else sudokuGrid(grid);
+    else {
+        cout << "Valid solution" << endl;
+        sudokuGrid(grid);
+    }
 }
