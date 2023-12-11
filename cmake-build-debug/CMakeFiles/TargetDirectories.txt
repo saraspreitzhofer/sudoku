@@ -1,0 +1,3 @@
+/Users/saraspreitzhofer/technikum/1. Semester/Evolutionary and Logic-based AI/Teil2/sudoku/cmake-build-debug/CMakeFiles/sudoku.dir
+/Users/saraspreitzhofer/technikum/1. Semester/Evolutionary and Logic-based AI/Teil2/sudoku/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/saraspreitzhofer/technikum/1. Semester/Evolutionary and Logic-based AI/Teil2/sudoku/cmake-build-debug/CMakeFiles/rebuild_cache.dir
