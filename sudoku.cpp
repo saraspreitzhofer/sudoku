@@ -79,7 +79,7 @@ void genomeToGrid(const GA1DArrayGenome<int> &genome) {
     }
 }
 
-void sudokuGridFromGenome(const GA1DArrayGenome<int> &genome){
+void sudokuGridFromGenome(const GA1DArrayGenome<int> &genome) {
     genomeToGrid(genome);
     sudokuGrid(grid);
     cout << endl;
@@ -88,8 +88,7 @@ void sudokuGridFromGenome(const GA1DArrayGenome<int> &genome){
 // Objective function
 float objective(GAGenome &g) {
     auto &genome = (GA1DArrayGenome<int> &) g;
-    int fitness = N*N;
-
+    int fitness = N * N;
     genomeToGrid(genome);
     // Check how many numbers are incorrect
     for (int row = 0; row < N; row++) {
@@ -101,10 +100,7 @@ float objective(GAGenome &g) {
             }
         }
     }
-    if (checkSudoku(grid)) fitness = N * N + 1;
-    //sudokuGrid(grid);
-    //cout << endl;
-    //cout << "Objective = " << fitness << endl;
+    if (checkSudoku(grid)) fitness = 1000;
     return (float) fitness;
 }
 
@@ -151,30 +147,21 @@ int crossover(const GAGenome &p1, const GAGenome &p2, GAGenome *c1, GAGenome *c2
         auto &child1 = (GA1DArrayGenome<int> &) *c1;
         auto &child2 = (GA1DArrayGenome<int> &) *c2;
 
-        int cut = rand() % (N*N);
-        //cout << "cut at " << cut << endl;
-        for (int i = 0; i < N*N; i++) {
+        int cut = rand() % (N * N);
+        for (int i = 0; i < N * N; i++) {
             if (i < cut) {
                 child1.gene(i, parent1.gene(i));
                 child2.gene(i, parent2.gene(i));
-            } else {    // todo child 2 is not correct
+            } else {
                 child1.gene(i, parent2.gene(i));
                 child2.gene(i, parent1.gene(i));
             }
         }
-        /*cout << "Parent 1" << endl;
-        sudokuGridFromGenome(parent1);
-        cout << "Parent 2" << endl;
-        sudokuGridFromGenome(parent2);
-        cout << "Child 1" << endl;
-        sudokuGridFromGenome(child1);
-        cout << "Child 2" << endl;
-        sudokuGridFromGenome(child2);*/
         return 2;
     } else if (c1) {
         auto &child = (GA1DArrayGenome<int> &) *c1;
-        int cut = rand() % (N*N);
-        for (int i = 0; i < N*N; i++) {
+        int cut = rand() % (N * N);
+        for (int i = 0; i < N * N; i++) {
             if (i < cut) {
                 child.gene(i, parent1.gene(i));
             } else {
@@ -190,7 +177,7 @@ int crossover(const GAGenome &p1, const GAGenome &p2, GAGenome *c1, GAGenome *c2
 int main() {
     srand(static_cast<unsigned int>(time(nullptr)));
 
-    GA1DArrayGenome<int> genome(N, objective);
+    GA1DArrayGenome<int> genome(N * N, objective);
     genome.initializer(initializer);
     genome.mutator(mutator);
     genome.crossover(crossover);
@@ -206,7 +193,7 @@ int main() {
     const GA1DArrayGenome<int> &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
     cout << "Best solution found: " << endl;
     cout << "Fitness: " << objective((GAGenome &) bestGenome) << endl;
-    sudokuGridFromGenome(bestGenome);   // todo weird results
+    sudokuGridFromGenome(bestGenome);
 
     // free the allocated memory
     for (int i = 0; i < N; ++i) {
