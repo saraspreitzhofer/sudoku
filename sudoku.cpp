@@ -4,6 +4,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
+#include <random>
 #include "sudoku_solver.cpp"
 
 using namespace std;
@@ -37,17 +38,7 @@ bool isNumberRepeated(int row, int col, int num, int **sudoku) {
     for (int i = 0; i < N; ++i) {
         if (sudoku[row][i] == num) {
             count++;
-            if (count > 2) {
-                return true;
-            }
-        }
-    }
-    // Check column
-    count = 0;
-    for (int i = 0; i < N; ++i) {
-        if (sudoku[i][col] == num) {
-            count++;
-            if (count > 2) {
+            if (count > 1) {
                 return true;
             }
         }
@@ -60,7 +51,7 @@ bool isNumberRepeated(int row, int col, int num, int **sudoku) {
         for (int j = 0; j < 3; ++j) {
             if (sudoku[boxStartRow + i][boxStartCol + j] == num) {
                 count++;
-                if (count > 2) {
+                if (count > 1) {
                     return true;
                 }
             }
@@ -79,29 +70,28 @@ void genomeToGrid(const GA1DArrayGenome<int> &genome) {
     }
 }
 
-void sudokuGridFromGenome(const GA1DArrayGenome<int> &genome) {
-    genomeToGrid(genome);
-    sudokuGrid(grid);
-    cout << endl;
-}
-
 // Objective function
 float objective(GAGenome &g) {
     auto &genome = (GA1DArrayGenome<int> &) g;
-    int fitness = N * N;
     genomeToGrid(genome);
-    // Check how many numbers are incorrect
-    for (int row = 0; row < N; row++) {
-        for (int col = 0; col < N; col++) {
-            int num = grid[row][col];
-            // Check if the number is repeated in the same row, column, or box
-            if (isNumberRepeated(row, col, num, grid)) {
-                fitness--;
+
+    if (checkSudoku(grid)) {
+        cout << "valid " << N * N * N << endl;
+        return N * N * N;
+    } else {
+        // Check how many numbers are incorrect
+        int fitness = N * N;
+        for (int row = 0; row < N; row++) {
+            for (int col = 0; col < N; col++) {
+                int num = grid[row][col];
+                // Check if the number is repeated in the same row or box
+                if (isNumberRepeated(row, col, num, grid)) {
+                    fitness--;
+                }
             }
         }
+        return (float) fitness;
     }
-    if (checkSudoku(grid)) fitness = 1000;
-    return (float) fitness;
 }
 
 // Initializer
@@ -112,7 +102,32 @@ void initializer(GAGenome &g) {
     for (int i = 0; i < N; ++i) {
         grid[i] = new int[N];
         for (int j = 0; j < N; ++j) {
-            grid[i][j] = genome.gene(i * N + j, rand() % N + 1);
+            grid[i][j] = 0;  // Initialize to 0 initially
+        }
+    }
+
+    // Set values in each column such that each number from 1 to N appears exactly once
+    for (int j = 0; j < N; ++j) {
+        std::vector<int> columnValues;
+        for (int i = 1; i <= N; ++i) {
+            columnValues.push_back(i);
+        }
+
+        // Shuffle the values for the current column
+        random_device rd;
+        mt19937 generator(rd());
+        shuffle(columnValues.begin(), columnValues.end(), generator);
+
+        // Set the shuffled values in the current column of the grid
+        for (int i = 0; i < N; ++i) {
+            grid[i][j] = columnValues[i];
+        }
+    }
+
+    // Set the genome with the values from the grid
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            genome.gene(i * N + j, grid[i][j]);
         }
     }
 }
@@ -193,7 +208,9 @@ int main() {
     const GA1DArrayGenome<int> &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
     cout << "Best solution found: " << endl;
     cout << "Fitness: " << objective((GAGenome &) bestGenome) << endl;
-    sudokuGridFromGenome(bestGenome);
+    genomeToGrid(bestGenome);
+    sudokuGrid(grid);
+    printSolution(grid);
 
     // free the allocated memory
     for (int i = 0; i < N; ++i) {
