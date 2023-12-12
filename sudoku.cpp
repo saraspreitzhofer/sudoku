@@ -9,8 +9,8 @@
 
 using namespace std;
 
-const int POPULATION_SIZE = 5000;
-const int MAX_GENERATIONS = 20000;
+const int POPULATION_SIZE = 1000;
+const int MAX_GENERATIONS = 2000;
 const float CROSSOVER_PROBABILITY = 0.1;
 const float MUTATION_PROBABILITY = 0.05;
 
@@ -27,7 +27,7 @@ Tip:
 2) modify the Sodoku-field via EA, to create a valid fully filled Sudoku (checked with a given sudoku solver)
  (similar to the 8-queens problem)
 3) remove one number at a time and try to solve the sodoku with a given sudoku solver -
- the lesser numbers remain the better.  // todo
+ the lesser numbers remain the better.
 optional: If your sudoku solver is able to return "the choices made" during solving the problem -
  this could be also included in the fittnes function. The more choices have to be made,
  the more complex is the sudoku-problem - therefore the better the sudoku.*/
@@ -205,9 +205,43 @@ int main() {
     ga.evolve();
 
     // Output the best Sudoku board
-    const GA1DArrayGenome<int> &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
+    auto &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
     cout << "Best solution found: " << endl;
     cout << "Fitness: " << objective((GAGenome &) bestGenome) << endl;
+    genomeToGrid(bestGenome);
+    sudokuGrid(grid);
+    bool isSolvable = printSolution(grid);
+
+    // Take bestGenome and set digits to 0 until the sudoku is not solvable anymore or until the whole sudoku contains only 0s
+    GA1DArrayGenome<int> bestGenomeCopy = bestGenome;
+
+    while (isSolvable) {
+        int index = rand() % (N * N);
+        if (bestGenomeCopy.gene(index) != 0) {
+            bestGenomeCopy.gene(index, 0);
+            genomeToGrid(bestGenomeCopy);
+            isSolvable = printSolution(grid);
+
+            if (!isSolvable) {
+                // If not solvable, revert the change and break the loop
+                bestGenomeCopy.gene(index, bestGenome.gene(index));
+                break;
+            }
+        } else {
+            // Check if the whole sudoku contains only 0s
+            bool allZeros = true;
+            for (int i = 0; i < N * N; ++i) {
+                if (bestGenomeCopy.gene(i) != 0) {
+                    allZeros = false;
+                    break;
+                }
+            }
+            if (allZeros) {
+                break;
+            }
+        }
+    }
+
     genomeToGrid(bestGenome);
     sudokuGrid(grid);
     printSolution(grid);
