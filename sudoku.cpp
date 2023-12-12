@@ -9,8 +9,8 @@
 
 using namespace std;
 
-const int POPULATION_SIZE = 500;
-const int MAX_GENERATIONS = 2000;
+const int POPULATION_SIZE = 5000;
+const int MAX_GENERATIONS = 20000;
 const float CROSSOVER_PROBABILITY = 0.1;
 const float MUTATION_PROBABILITY = 0.05;
 
@@ -106,21 +106,21 @@ void initializer(GAGenome &g) {
         }
     }
 
-    // Set values in each column such that each number from 1 to N appears exactly once
-    for (int j = 0; j < N; ++j) {
-        std::vector<int> columnValues;
-        for (int i = 1; i <= N; ++i) {
-            columnValues.push_back(i);
+    // Set values in each row such that each number from 1 to N appears exactly once
+    for (int i = 0; i < N; ++i) {
+        std::vector<int> rowValues;
+        for (int j = 1; j <= N; ++j) {
+            rowValues.push_back(j);
         }
 
-        // Shuffle the values for the current column
+        // Shuffle the values for the current row
         random_device rd;
         mt19937 generator(rd());
-        shuffle(columnValues.begin(), columnValues.end(), generator);
+        shuffle(rowValues.begin(), rowValues.end(), generator);
 
-        // Set the shuffled values in the current column of the grid
-        for (int i = 0; i < N; ++i) {
-            grid[i][j] = columnValues[i];
+        // Set the shuffled values in the current row of the grid
+        for (int j = 0; j < N; ++j) {
+            grid[i][j] = rowValues[j];
         }
     }
 
