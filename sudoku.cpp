@@ -10,9 +10,9 @@
 using namespace std;
 
 const int POPULATION_SIZE = 1000;
-const int MAX_GENERATIONS = 2000;
-const float CROSSOVER_PROBABILITY = 0.1;
-const float MUTATION_PROBABILITY = 0.05;
+const int MAX_GENERATIONS = 3000;
+const float CROSSOVER_PROBABILITY = 0.05;
+const float MUTATION_PROBABILITY = 0.1;
 
 int **grid;
 
@@ -135,21 +135,25 @@ void initializer(GAGenome &g) {
 // Mutator
 int mutator(GAGenome &g, float p) {
     auto &genome = (GA1DArrayGenome<int> &) g;
-
     int nMutations = 0;
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < N; ++j) {
-            if (GAFlipCoin(p)) {
-                int randRow = rand() % N;
-                int randCol = rand() % N;
-                // Swap two numbers in the grid
-                int temp = genome.gene(i * N + j);
-                genome.gene(i * N + j, genome.gene(randRow * N + randCol));
-                genome.gene(randRow * N + randCol, temp);
-
-                nMutations++;
-            }
+    if (GAFlipCoin(p)) {
+        // Pick two random positions
+        int pos1 = rand() % (N * N);
+        int pos2 = rand() % (N * N);
+        // Ensure pos1 and pos2 are different
+        while (pos2 == pos1) {
+            pos2 = rand() % (N * N);
         }
+        if (pos1 > pos2) {
+            swap(pos1, pos2);
+        }
+        // Move the second allele to follow the first, shifting the rest
+        int tmp = genome.gene(pos2);
+        for (int j = pos2; j > pos1; j--) {
+            genome.gene(j, genome.gene(j - 1));
+        }
+        genome.gene(pos1 + 1, tmp);
+        nMutations++;
     }
     return nMutations;
 }
