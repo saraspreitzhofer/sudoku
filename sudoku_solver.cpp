@@ -103,7 +103,7 @@ bool checkSudoku(int **grid) {
     return true; // The Sudoku grid is valid
 }
 
-bool printSolution(int **grid) {
+bool isSolvable(int **grid) {
     if (!solveSudoku(grid)) {
         cout << "No solution exists" << endl;
         return false;

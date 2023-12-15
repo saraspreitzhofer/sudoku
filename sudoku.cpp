@@ -9,8 +9,8 @@
 
 using namespace std;
 
-const int POPULATION_SIZE = 1000;
-const int MAX_GENERATIONS = 3000;
+const int POPULATION_SIZE = 5000;
+const int MAX_GENERATIONS = 5000;
 const float CROSSOVER_PROBABILITY = 0.05;
 const float MUTATION_PROBABILITY = 0.1;
 
@@ -37,6 +37,16 @@ bool isNumberRepeated(int row, int col, int num, int **sudoku) {
     // Check row
     for (int i = 0; i < N; ++i) {
         if (sudoku[row][i] == num) {
+            count++;
+            if (count > 1) {
+                return true;
+            }
+        }
+    }
+    // Check column
+    count = 0;
+    for (int i = 0; i < N; ++i) {
+        if (sudoku[i][col] == num) {
             count++;
             if (count > 1) {
                 return true;
@@ -84,7 +94,7 @@ float objective(GAGenome &g) {
         for (int row = 0; row < N; row++) {
             for (int col = 0; col < N; col++) {
                 int num = grid[row][col];
-                // Check if the number is repeated in the same row or box
+                // Check if the number is repeated in the same row, column or box
                 if (isNumberRepeated(row, col, num, grid)) {
                     fitness--;
                 }
@@ -193,6 +203,44 @@ int crossover(const GAGenome &p1, const GAGenome &p2, GAGenome *c1, GAGenome *c2
     }
 }
 
+bool allZeros(const GA1DArrayGenome<int> &genome) {
+    for (int i = 0; i < N * N; ++i) {
+        if (genome.gene(i) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool backtrackRemoveNumbers(GA1DArrayGenome<int> &genome) {
+    if (allZeros(genome)) {
+        return true;
+    }
+
+    for (int i = 0; i < N * N; ++i) {
+        if (genome.gene(i) != 0) {
+            int originalValue = genome.gene(i);
+            genome.gene(i, 0);
+
+            if (isSolvable(grid)) {
+                if (backtrackRemoveNumbers(genome)) {
+                    // If the remaining sudoku is solvable, we found a solution
+                    return true;
+                }
+            }
+            // Revert the change
+            genome.gene(i, originalValue);
+        }
+    }
+
+    return false;  // No solution found
+}
+
+void removeNumbers(GA1DArrayGenome<int> &bestGenome) {
+    GA1DArrayGenome<int> bestGenomeCopy = bestGenome;
+    backtrackRemoveNumbers(bestGenomeCopy);
+}
+
 int main() {
     srand(static_cast<unsigned int>(time(nullptr)));
 
@@ -214,42 +262,13 @@ int main() {
     cout << "Fitness: " << objective((GAGenome &) bestGenome) << endl;
     genomeToGrid(bestGenome);
     sudokuGrid(grid);
-    bool isSolvable = printSolution(grid);
 
-    // Take bestGenome and set digits to 0 until the sudoku is not solvable anymore or until the whole sudoku contains only 0s
-    GA1DArrayGenome<int> bestGenomeCopy = bestGenome;
-
-    while (isSolvable) {
-        int index = rand() % (N * N);
-        if (bestGenomeCopy.gene(index) != 0) {
-            bestGenomeCopy.gene(index, 0);
-            genomeToGrid(bestGenomeCopy);
-            isSolvable = printSolution(grid);
-
-            if (!isSolvable) {
-                // If not solvable, revert the change and break the loop
-                bestGenomeCopy.gene(index, bestGenome.gene(index));
-                break;
-            }
-        } else {
-            // Check if the whole sudoku contains only 0s
-            bool allZeros = true;
-            for (int i = 0; i < N * N; ++i) {
-                if (bestGenomeCopy.gene(i) != 0) {
-                    allZeros = false;
-                    break;
-                }
-            }
-            if (allZeros) {
-                break;
-            }
-        }
+    if (isSolvable(grid)) {
+        removeNumbers(bestGenome);
+        genomeToGrid(bestGenome);
+        sudokuGrid(grid);
+        isSolvable(grid);
     }
-
-    genomeToGrid(bestGenome);
-    sudokuGrid(grid);
-    printSolution(grid);
-
     // free the allocated memory
     for (int i = 0; i < N; ++i) {
         delete[] grid[i];
