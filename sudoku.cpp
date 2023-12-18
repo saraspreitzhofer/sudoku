@@ -250,11 +250,48 @@ int main() {
     genome.crossover(crossover);
 
     GASimpleGA ga(genome);
-    ga.populationSize(POPULATION_SIZE);
-    ga.nGenerations(MAX_GENERATIONS);
+    ga.initialize();
     ga.pMutation(MUTATION_PROBABILITY);
     ga.pCrossover(CROSSOVER_PROBABILITY);
-    ga.evolve();
+
+    int populationSize = POPULATION_SIZE;
+    int maxGenerations = MAX_GENERATIONS;
+    int generationsWithoutImprovement = 0;
+    float bestFitness = 0.0;
+
+    for (int generation = 0; generation < maxGenerations; ++generation) {
+        // Update population size and generations based on the generation number
+        ga.populationSize(populationSize);
+        ga.nGenerations(maxGenerations - generation);
+
+        // Evolve for the current generation
+        ga.step();
+
+        // Output the best solution for each generation
+        auto &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
+        float currentBestFitness = objective((GAGenome &) bestGenome);
+
+        cout << "Generation " << generation + 1 << ": Fitness = " << currentBestFitness << endl;
+
+        // Adjust parameters based on progress
+        if (currentBestFitness > bestFitness) {
+            // Fitness has improved
+            generationsWithoutImprovement = 0;
+            bestFitness = currentBestFitness;
+        } else {
+            // Fitness hasn't improved
+            generationsWithoutImprovement++;
+        }
+        if (generationsWithoutImprovement > 100) {
+            // If fitness hasn't improved for the last 10 generations, reduce population size
+            populationSize = max(500, populationSize - 10); // Minimum population size is 500
+        }
+        if(generationsWithoutImprovement > 200){
+            maxGenerations = maxGenerations - 50;
+            generationsWithoutImprovement = 0;
+        }
+        if (currentBestFitness >= N * N * N) break;
+    }
 
     // Output the best Sudoku board
     auto &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
