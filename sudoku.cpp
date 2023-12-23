@@ -186,48 +186,37 @@ int crossover(const GAGenome &p1, const GAGenome &p2, GAGenome *c1, GAGenome *c2
     }
 }
 
-/*bool backtrackRemoveNumbers(GA1DArrayGenome<int> &genome) {
-    cout << "backtrackRemoveNumbers" << endl;
+bool backtrackRemoveNumbers(GA1DArrayGenome<int> &genome) {
+    genomeToGrid(genome);
+    if(countZeros(grid) > 55) return true;
     for (int i = 0; i < N * N; ++i) {
         if (genome.gene(i) != 0) {
             int originalValue = genome.gene(i);
             genome.gene(i, 0);
             genomeToGrid(genome);
-            sudokuGrid(grid);
 
             if (solveSudoku(grid)) {
-                cout << "single solution" << endl;
                 if (backtrackRemoveNumbers(genome)) {
                     // If the remaining sudoku is solvable, we found a solution
                     return true;
                 }
             }
-            genomeToGrid(genome);
-            sudokuGrid(grid);
-            cout << "no single solution" << endl;
+
             // Revert the change
             genome.gene(i, originalValue);
-            genomeToGrid(genome);
-            sudokuGrid(grid);
         }
     }
-    cout << "backtrackRemoveNumbers end: no solution found" << endl;
     return false;  // No solution found
 }
 
 void removeNumbers(GA1DArrayGenome<int> &bestGenome) {
-    cout << "remove numbers" << endl;
     GA1DArrayGenome<int> bestGenomeCopy = bestGenome;
     genomeToGrid(bestGenomeCopy);
     if (backtrackRemoveNumbers(bestGenomeCopy)) {
-        cout << "backtrackRemoveNumbers true" << endl;
         // If backtracking was successful, update the original bestGenome
         bestGenome = bestGenomeCopy;
-    } else {
-        cout << "No solution found" << endl;
     }
-    cout << "end remove numbers" << endl;
-}*/
+}
 
 int main() {
     srand(static_cast<unsigned int>(time(nullptr)));
@@ -272,7 +261,7 @@ int main() {
             maxGenerations = maxGenerations - 50;
 
             // reduce population size
-            // populationSize = max(1000, populationSize - 10); // Minimum population size is 1000
+            populationSize = max(1000, populationSize - 10); // Minimum population size is 1000
 
             // increase mutation probability
             if (MUTATION_PROBABILITY < 0.2) {
@@ -289,20 +278,13 @@ int main() {
     cout << "Fitness: " << objective((GAGenome &) bestGenome) << endl;
     genomeToGrid(bestGenome);
     sudokuGrid(grid);
-    cout << endl;
 
-    /*if (isSolvable(grid)) {
-        cout << "isSolvable" << endl;
-        sudokuGrid(grid);
-        cout << "removeNumbers" << endl;
+    if (isSolvable(grid)) {
         removeNumbers(bestGenome);
-        cout << "genomeToGrid" << endl;
         genomeToGrid(bestGenome);
-        cout << "sudokuGrid" << endl;
         sudokuGrid(grid);
-        cout << "isSolvable2" << endl;
         isSolvable(grid);
-    }*/
+    }
 
     // free the allocated memory
     for (int i = 0; i < N; ++i) {

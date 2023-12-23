@@ -102,20 +102,38 @@ bool isValidPlace(int row, int col, int num, int **grid) {
                                                                                                  grid);
 }
 
-bool solveSudoku(int **grid) {
+int countZeros(int **grid) {
+    int count = 0;
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            if (grid[i][j] == 0) count++;
+        }
+    }
+    return count;
+}
+
+bool solveSudokuRecursion(int **grid, int &solutionCount) {
     int row, col;
-    if (!findEmptyPlace(row, col, grid))
-        return true; //when all places are filled
+    if (!findEmptyPlace(row, col, grid)) {
+        solutionCount++;
+        return solutionCount == 1; // Return true if there is only one solution
+    }
     for (int num = 1; num <= 9; num++) { //valid numbers are 1 - 9
         if (isValidPlace(row, col, num, grid)) { //check validation, if yes, put the number in the grid
             grid[row][col] = num;
-            if (solveSudoku(grid)) //recursively go for other rooms in the grid
-                return true;
-            grid[row][col] = 0; //turn to unassigned space when conditions are not satisfied
+            if (!solveSudokuRecursion(grid, solutionCount)) // Return false if more than one solution found
+                return false;
+            grid[row][col] = 0; //turn to unassigned space
         }
     }
-    return false;
+    return true;
 }
+
+bool solveSudoku(int **grid) {
+    int solutionCount = 0;
+    return solveSudokuRecursion(grid, solutionCount) && solutionCount == 1;
+}
+
 
 bool checkSudoku(int **grid) {
     int repetitions = 0;
@@ -133,7 +151,7 @@ bool isSolvable(int **grid) {
     if (!solveSudoku(grid)) {
         cout << "No solution exists" << endl;
         return false;
-    } else if (!checkSudoku(grid)) {
+    } else if (countZeros(grid) == 0 && !checkSudoku(grid)) {
         cout << "Incorrect solution" << endl;
         return false;
     } else {
