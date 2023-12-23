@@ -1,6 +1,5 @@
 #include <ga/GA1DArrayGenome.h>
 #include <ga/GASimpleGA.h>
-#include <ga/std_stream.h>
 #include <ctime>
 #include <cstdlib>
 #include <iostream>
@@ -9,10 +8,10 @@
 
 using namespace std;
 
-const int POPULATION_SIZE = 5000;
+const int POPULATION_SIZE = 20000;
 const int MAX_GENERATIONS = 5000;
-const float CROSSOVER_PROBABILITY = 0.05;
-const float MUTATION_PROBABILITY = 0.1;
+const float CROSSOVER_PROBABILITY = 0.01;
+float MUTATION_PROBABILITY = 0.05;
 
 int **grid;
 
@@ -32,44 +31,6 @@ optional: If your sudoku solver is able to return "the choices made" during solv
  this could be also included in the fittnes function. The more choices have to be made,
  the more complex is the sudoku-problem - therefore the better the sudoku.*/
 
-bool isNumberRepeated(int row, int col, int num, int **sudoku) {
-    int count = 0;
-    // Check row
-    for (int i = 0; i < N; ++i) {
-        if (sudoku[row][i] == num) {
-            count++;
-            if (count > 1) {
-                return true;
-            }
-        }
-    }
-    // Check column
-    count = 0;
-    for (int i = 0; i < N; ++i) {
-        if (sudoku[i][col] == num) {
-            count++;
-            if (count > 1) {
-                return true;
-            }
-        }
-    }
-    // Check box
-    count = 0;
-    int boxStartRow = row - row % 3;
-    int boxStartCol = col - col % 3;
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            if (sudoku[boxStartRow + i][boxStartCol + j] == num) {
-                count++;
-                if (count > 1) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
 
 // Convert the genome to a Sudoku grid
 void genomeToGrid(const GA1DArrayGenome<int> &genome) {
@@ -86,21 +47,44 @@ float objective(GAGenome &g) {
     genomeToGrid(genome);
 
     if (checkSudoku(grid)) {
-        cout << "valid " << N * N * N << endl;
-        return N * N * N;
+        return N * N * N * 2;
     } else {
         // Check how many numbers are incorrect
-        int fitness = N * N;
+        int fitness = N * N * N;
         for (int row = 0; row < N; row++) {
             for (int col = 0; col < N; col++) {
                 int num = grid[row][col];
                 // Check if the number is repeated in the same row, column or box
-                if (isNumberRepeated(row, col, num, grid)) {
-                    fitness--;
+                int repetitions = isNumberRepeated(row, col, num, grid);
+                if (repetitions > 0) {
+                    fitness = fitness - repetitions;
                 }
             }
         }
         return (float) fitness;
+    }
+}
+
+void fillRemainingCells() {
+    for (int row = 0; row < N; ++row) {
+        for (int col = 0; col < N; ++col) {
+            std::vector<int> randomValues;
+            for (int i = 1; i <= N; ++i) {
+                randomValues.push_back(i);
+            }
+            random_device rd;
+            mt19937 generator(rd());
+            shuffle(randomValues.begin(), randomValues.end(), generator);
+
+            if (grid[row][col] == 0) {
+                for (int i = 0; i < N; ++i) {
+                    if (!isPresentInRow(row, randomValues[i], grid)) {
+                        grid[row][col] = randomValues[i];
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -116,25 +100,28 @@ void initializer(GAGenome &g) {
         }
     }
 
-    // Set values in each row such that each number from 1 to N appears exactly once
-    for (int i = 0; i < N; ++i) {
-        std::vector<int> rowValues;
-        for (int j = 1; j <= N; ++j) {
-            rowValues.push_back(j);
+    // Set values in each box so that each number from 1 to N appears exactly once
+    for (int box = 0; box < 3; ++box) {
+        std::vector<int> boxValues;
+        for (int i = 1; i <= N; ++i) {
+            boxValues.push_back(i);
         }
 
-        // Shuffle the values for the current row
+        // Shuffle the values for the current box
         random_device rd;
         mt19937 generator(rd());
-        shuffle(rowValues.begin(), rowValues.end(), generator);
+        shuffle(boxValues.begin(), boxValues.end(), generator);
 
-        // Set the shuffled values in the current row of the grid
-        for (int j = 0; j < N; ++j) {
-            grid[i][j] = rowValues[j];
+        // Set the shuffled values in the current box
+        for (int row = 0; row < 3; ++row) {
+            for (int col = 0; col < 3; ++col) {
+                grid[box * 3 + row][col + box * 3] = boxValues[row * 3 + col];
+            }
         }
     }
+    fillRemainingCells();
 
-    // Set the genome with the values from the grid
+// Set the genome with the values from the grid
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             genome.gene(i * N + j, grid[i][j]);
@@ -154,15 +141,10 @@ int mutator(GAGenome &g, float p) {
         while (pos2 == pos1) {
             pos2 = rand() % (N * N);
         }
-        if (pos1 > pos2) {
-            swap(pos1, pos2);
-        }
-        // Move the second allele to follow the first, shifting the rest
-        int tmp = genome.gene(pos2);
-        for (int j = pos2; j > pos1; j--) {
-            genome.gene(j, genome.gene(j - 1));
-        }
-        genome.gene(pos1 + 1, tmp);
+        int tmp = genome.gene(pos1);
+        genome.gene(pos1, genome.gene(pos2));
+        genome.gene(pos2, tmp);
+
         nMutations++;
     }
     return nMutations;
@@ -176,7 +158,8 @@ int crossover(const GAGenome &p1, const GAGenome &p2, GAGenome *c1, GAGenome *c2
         auto &child1 = (GA1DArrayGenome<int> &) *c1;
         auto &child2 = (GA1DArrayGenome<int> &) *c2;
 
-        int cut = rand() % (N * N);
+        // cut at the end of line 3 or 6
+        int cut = ((rand() % 2) + 1) * 3 * N;
         for (int i = 0; i < N * N; i++) {
             if (i < cut) {
                 child1.gene(i, parent1.gene(i));
@@ -203,43 +186,48 @@ int crossover(const GAGenome &p1, const GAGenome &p2, GAGenome *c1, GAGenome *c2
     }
 }
 
-bool allZeros(const GA1DArrayGenome<int> &genome) {
-    for (int i = 0; i < N * N; ++i) {
-        if (genome.gene(i) != 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool backtrackRemoveNumbers(GA1DArrayGenome<int> &genome) {
-    if (allZeros(genome)) {
-        return true;
-    }
-
+/*bool backtrackRemoveNumbers(GA1DArrayGenome<int> &genome) {
+    cout << "backtrackRemoveNumbers" << endl;
     for (int i = 0; i < N * N; ++i) {
         if (genome.gene(i) != 0) {
             int originalValue = genome.gene(i);
             genome.gene(i, 0);
+            genomeToGrid(genome);
+            sudokuGrid(grid);
 
-            if (isSolvable(grid)) {
+            if (solveSudoku(grid)) {
+                cout << "single solution" << endl;
                 if (backtrackRemoveNumbers(genome)) {
                     // If the remaining sudoku is solvable, we found a solution
                     return true;
                 }
             }
+            genomeToGrid(genome);
+            sudokuGrid(grid);
+            cout << "no single solution" << endl;
             // Revert the change
             genome.gene(i, originalValue);
+            genomeToGrid(genome);
+            sudokuGrid(grid);
         }
     }
-
+    cout << "backtrackRemoveNumbers end: no solution found" << endl;
     return false;  // No solution found
 }
 
 void removeNumbers(GA1DArrayGenome<int> &bestGenome) {
+    cout << "remove numbers" << endl;
     GA1DArrayGenome<int> bestGenomeCopy = bestGenome;
-    backtrackRemoveNumbers(bestGenomeCopy);
-}
+    genomeToGrid(bestGenomeCopy);
+    if (backtrackRemoveNumbers(bestGenomeCopy)) {
+        cout << "backtrackRemoveNumbers true" << endl;
+        // If backtracking was successful, update the original bestGenome
+        bestGenome = bestGenomeCopy;
+    } else {
+        cout << "No solution found" << endl;
+    }
+    cout << "end remove numbers" << endl;
+}*/
 
 int main() {
     srand(static_cast<unsigned int>(time(nullptr)));
@@ -267,28 +255,30 @@ int main() {
         // Evolve for the current generation
         ga.step();
 
-        // Output the best solution for each generation
         auto &bestGenome = (GA1DArrayGenome<int> &) ga.statistics().bestIndividual();
         float currentBestFitness = objective((GAGenome &) bestGenome);
 
         cout << "Generation " << generation + 1 << ": Fitness = " << currentBestFitness << endl;
 
-        // Adjust parameters based on progress
         if (currentBestFitness > bestFitness) {
-            // Fitness has improved
             generationsWithoutImprovement = 0;
             bestFitness = currentBestFitness;
         } else {
-            // Fitness hasn't improved
             generationsWithoutImprovement++;
         }
-        if (generationsWithoutImprovement > 100) {
-            // If fitness hasn't improved for the last 10 generations, reduce population size
-            populationSize = max(500, populationSize - 10); // Minimum population size is 500
-        }
-        if(generationsWithoutImprovement > 200){
-            maxGenerations = maxGenerations - 50;
+        // If fitness hasn't improved for the last 200 generations
+        if (generationsWithoutImprovement > 200) {
             generationsWithoutImprovement = 0;
+            maxGenerations = maxGenerations - 50;
+
+            // reduce population size
+            // populationSize = max(1000, populationSize - 10); // Minimum population size is 1000
+
+            // increase mutation probability
+            if (MUTATION_PROBABILITY < 0.2) {
+                MUTATION_PROBABILITY += 0.01;
+                ga.pMutation(MUTATION_PROBABILITY);
+            }
         }
         if (currentBestFitness >= N * N * N) break;
     }
@@ -299,13 +289,21 @@ int main() {
     cout << "Fitness: " << objective((GAGenome &) bestGenome) << endl;
     genomeToGrid(bestGenome);
     sudokuGrid(grid);
+    cout << endl;
 
-    if (isSolvable(grid)) {
-        removeNumbers(bestGenome);
-        genomeToGrid(bestGenome);
+    /*if (isSolvable(grid)) {
+        cout << "isSolvable" << endl;
         sudokuGrid(grid);
+        cout << "removeNumbers" << endl;
+        removeNumbers(bestGenome);
+        cout << "genomeToGrid" << endl;
+        genomeToGrid(bestGenome);
+        cout << "sudokuGrid" << endl;
+        sudokuGrid(grid);
+        cout << "isSolvable2" << endl;
         isSolvable(grid);
-    }
+    }*/
+
     // free the allocated memory
     for (int i = 0; i < N; ++i) {
         delete[] grid[i];

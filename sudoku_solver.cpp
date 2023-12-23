@@ -18,13 +18,57 @@ bool isPresentInRow(int row, int num, int **grid) { //check whether num is prese
     return false;
 }
 
-bool
-isPresentInBox(int boxStartRow, int boxStartCol, int num, int **grid) { //check whether num is present in 3x3 box or not
+bool isPresentInBox(int boxStartRow, int boxStartCol, int num, int **grid) { //check whether num is present in 3x3 box
     for (int row = 0; row < 3; row++)
         for (int col = 0; col < 3; col++)
             if (grid[row + boxStartRow][col + boxStartCol] == num)
                 return true;
     return false;
+}
+
+int isNumberRepeated(int row, int col, int num, int **sudoku) {
+    int count = 0;
+    int repetitions = 0;
+    // Check row
+    for (int i = 0; i < N; ++i) {
+        if (sudoku[row][i] == num) {
+            count++;
+            if (count > 1) {
+                repetitions++;
+                break;
+            }
+        }
+    }
+    // Check column
+    count = 0;
+    for (int i = 0; i < N; ++i) {
+        if (sudoku[i][col] == num) {
+            count++;
+            if (count > 1) {
+                repetitions++;
+                break;
+            }
+        }
+    }
+    // Check box
+    count = 0;
+    bool stop = false;
+    int boxStartRow = row - row % 3;
+    int boxStartCol = col - col % 3;
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (sudoku[boxStartRow + i][boxStartCol + j] == num) {
+                count++;
+                if (count > 1) {
+                    repetitions++;
+                    stop = true;
+                    break;
+                }
+            }
+        }
+        if (stop) break;
+    }
+    return repetitions;
 }
 
 void sudokuGrid(int **grid) { //print the sudoku grid after solve
@@ -74,45 +118,25 @@ bool solveSudoku(int **grid) {
 }
 
 bool checkSudoku(int **grid) {
-    // Check validity for each row
+    int repetitions = 0;
     for (int row = 0; row < N; row++) {
-        for (int num = 1; num <= N; num++) {
-            if (isPresentInRow(row, num, grid))
-                return false;
+        for (int col = 0; col < N; col++) {
+            int num = grid[row][col];
+            if (num == 0) return false;
+            repetitions += isNumberRepeated(row, col, num, grid);
         }
     }
-
-    // Check validity for each column
-    for (int col = 0; col < N; col++) {
-        for (int num = 1; num <= N; num++) {
-            if (isPresentInCol(col, num, grid))
-                return false;
-        }
-    }
-
-    // Check validity for each box
-    for (int startRow = 0; startRow < N; startRow += 3) {
-        for (int startCol = 0; startCol < N; startCol += 3) {
-            for (int num = 1; num <= N; num++) {
-                if (isPresentInBox(startRow, startCol, num, grid))
-                    return false;
-            }
-        }
-    }
-
-    return true; // The Sudoku grid is valid
+    return repetitions == 0;
 }
 
 bool isSolvable(int **grid) {
     if (!solveSudoku(grid)) {
         cout << "No solution exists" << endl;
         return false;
-    }
-    else if (!checkSudoku(grid)) {
+    } else if (!checkSudoku(grid)) {
         cout << "Incorrect solution" << endl;
         return false;
-    }
-    else {
+    } else {
         cout << "Valid solution" << endl << endl;
         return true;
     }
